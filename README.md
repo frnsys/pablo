@@ -13,9 +13,9 @@ These mix sketches are meant for high-scale automated ideation and _not_ a subst
 
 ## Setup
 
-Install the python dependencies:
+Clone the git repo, then from inside the repo:
 
-    $ pip install -r requirements.txt
+    $ pip install .
 
 Pablo relies on some other libraries for the heavy lifting, so install those:
 
@@ -28,11 +28,11 @@ And you'll also need [Essentia](http://essentia.upf.edu/documentation/installing
 
 You can have Pablo analyze your library in one go, so that mix generation runs quicker. Pablo will persist song analyses based on file hashes so no redundant processing is necessary.
 
-    $ python main.py analyze /path/to/my/songs
+    $ pablo analyze /path/to/my/songs
 
 Then you can start generating mixes:
 
-    $ python main.py mix /path/to/my/songs /path/to/output
+    $ pablo mix /path/to/my/songs /path/to/output
 
 
 ## To do

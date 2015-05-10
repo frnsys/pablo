@@ -1,4 +1,4 @@
-from ringo.key import Key
+from pablo.key import Key
 import unittest
 
 class KeyTest(unittest.TestCase):

@@ -4,8 +4,8 @@ of this is adapted from Essentia's examples.
 The Essentia python bindings are really unintuitive.
 """
 
-from ringo.key import Key
-from ringo.datastore import save, load
+from pablo.key import Key
+from pablo.datastore import save, load
 from essentia import Pool, run, standard, streaming
 
 

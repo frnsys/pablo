@@ -1,10 +1,13 @@
+import essentia
+essentia.log.warningActive = False
+
 import os
 import click
 import shutil
 import random
 from glob import glob
 from colorama import Fore
-from ringo import analysis, manipulate
+from pablo import analysis, manipulate
 from pydub import AudioSegment
 
 
@@ -49,7 +52,7 @@ def analyze(library):
 @click.option('-M', 'n_samples', default=10, help='The number of samples to use for each track', type=int)
 def mix(library, outdir, chunk_sizes, n_tracks, n_songs, n_samples):
     # Prepare output directory, just to check if the directory is not empty
-    outdir = os.path.join(outdir, 'ringo_mix')
+    outdir = os.path.join(outdir, 'pablo_mix')
     sample_dir = os.path.join(outdir, 'samples')
     if os.path.exists(outdir) and os.listdir(outdir):
         raise Exception('Output directory is not empty')

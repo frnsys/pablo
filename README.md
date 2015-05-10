@@ -34,6 +34,7 @@ Then you can start generating mixes:
 
     $ pablo mix /path/to/my/songs /path/to/output
 
+Pablo will output the mix, a tracklist for the mix, the modified songs, and all of the sliced samples to the specified output directory.
 
 ## To do
 

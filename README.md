@@ -11,6 +11,19 @@ Beat alignment is still kind of finicky, but the quality of the output depends a
 These mix sketches are meant for high-scale automated ideation and _not_ a substitute for human editing ;)
 
 
+## Setup
+
+Install the python dependencies:
+
+    $ pip install -r requirements.txt
+
+Ringo relies on some other libraries for the heavy lifting, so install those:
+
+    $ brew install sox ffmpeg
+
+And you'll also need [Essentia](http://essentia.upf.edu/documentation/installing.html). [Installation instructions are here](http://essentia.upf.edu/documentation/installing.html).
+
+
 ## Usage
 
 You can have Ringo analyze your library in one go, so that mix generation runs quicker. Ringo will persist song analyses based on file hashes so no redundant processing is necessary.
@@ -28,3 +41,10 @@ Then you can start generating mixes:
 - heuristics for aligning samples better (e.g. take max chunk size and box-fit into those chunk sizes)
 - smoother transitions by crossfading? but without misaligning samples
 - EQ heuristics? e.g. some samples are only low or mid or high
+
+
+## Pie-in-the-sky
+
+- use [Gaia](https://github.com/MTG/gaia/tree/master/src/bindings/pygaia/scripts/classification) to train an audio classifier? then use this to have some notion of what kind of song to aim for?
+- Gaia has some kind of music similarity capabilities, I think. Could use that to further filter down selections based on similarity
+- could seed some songs and then crawl related youtube videos for automatic sample discovery

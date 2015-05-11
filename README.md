@@ -2,7 +2,7 @@
 
 (work in progress)
 
-It doesn't seem like the new Avalanches album is coming out any time soon, but with _Pablo_ you can automatically generate [plunderphonic](https://en.wikipedia.org/wiki/Plunderphonics) song sketches (music collages/sample mixes) to fill that void.
+It doesn't seem like the new Avalanches album is coming out any time soon, but with _Pablo_ (so named for [_Pablo's Cruise_](https://www.youtube.com/watch?v=7Ry8M8M-ICg)) you can automatically generate [plunderphonic](https://en.wikipedia.org/wiki/Plunderphonics) song sketches (music collages/sample mixes) to fill that void.
 
 Pablo will analyze a directory of audio files (mp3, wav) and randomly select a song to build a mix around. It will then pick out other appropriate songs from that directory - tempo-stretching and pitch-shifting them as needed - to slice into samples, which Pablo then assembles into a multi-track mix.
 
@@ -35,6 +35,10 @@ Then you can start generating mixes:
     $ pablo mix /path/to/my/songs /path/to/output
 
 Pablo will output the mix, a tracklist for the mix, the modified songs, and all of the sliced samples to the specified output directory.
+
+There are a few options you can pass in, to learn about them, help is available:
+
+    $ pablo mix --help
 
 ## To do
 

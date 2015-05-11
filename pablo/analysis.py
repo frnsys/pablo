@@ -4,6 +4,7 @@ of this is adapted from Essentia's examples.
 The Essentia python bindings are really unintuitive.
 """
 
+import numpy as np
 from pablo.key import Key
 from pablo.datastore import save, load
 from essentia import Pool, run, standard, streaming
@@ -99,3 +100,34 @@ def estimate_beats(infile):
     bt = standard.BeatTrackerMultiFeature()
     beats, _ = bt(audio)
     return beats
+
+
+def estimate_main_freq(infile):
+    """
+    Estimate if this is a low, mid, or high track.
+
+    Not really sure if this does what I need it to,
+    but some quick tests looked right.
+    """
+    loader = streaming.MonoLoader(filename=infile)
+    framecutter = streaming.FrameCutter()
+    windowing = streaming.Windowing(type="blackmanharris62")
+    spectrum = streaming.Spectrum()
+    freqbands = streaming.FrequencyBands(frequencyBands=[0, 200, 750, 4000])
+    pool = Pool()
+
+    loader.audio >> framecutter.signal
+    framecutter.frame >> windowing.frame >> spectrum.frame
+    spectrum.spectrum >> freqbands.spectrum
+    freqbands.bands >> (pool, 'bands')
+
+    run(loader)
+
+    sums = np.sum(pool['bands'], axis=0)
+    band = np.argmax(sums)
+    if band == 0:
+        return 'low'
+    elif band == 1:
+        return 'mid'
+    elif band == 2:
+        return 'high'

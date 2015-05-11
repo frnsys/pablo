@@ -45,7 +45,7 @@ def analyze(library):
 
 @cli.command()
 @click.argument('library', type=click.Path(exists=True))
-@click.argument('outdir', type=click.Path(exists=True))
+@click.argument('outdir', type=click.Path())
 @click.option('-C', 'chunk_sizes', default=[8,16,32], help='The chunk sizes to generate samples with. Should be a power of 2', type=list)
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
 @click.option('-S', 'n_songs', default=None, help='The number of songs to include (if enough are available)', type=int)
@@ -139,10 +139,10 @@ def mix(library, outdir, chunk_sizes, n_tracks, n_songs, n_samples):
     for i in range(n_tracks):
         selected = random.sample(samples, n_samples)
         sounds = [AudioSegment.from_file(f) for f in selected]
-        track = sounds[0]
+        track = sounds[0].normalize()
         for sound in sounds[1:]:
             # Remove crossfade to keep timing right? Not sure if necessary
-            track = track.append(sound, crossfade=0)
+            track = track.append(sound.normalize(), crossfade=0)
         tracks.append(track)
 
         track_file = os.path.join(outdir, 'track_{0}.mp3'.format(i))

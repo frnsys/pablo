@@ -1,7 +1,8 @@
 from pablo.key import Key
+from pablo import heuristics
 import unittest
 
-class KeyTest(unittest.TestCase):
+class KeyTests(unittest.TestCase):
     def setUp(self):
         self.key = Key('C', 'major')
 
@@ -49,3 +50,23 @@ class KeyTest(unittest.TestCase):
         key = Key('B', 'major')
         mix = self.key.mixable(key)
         self.assertFalse(mix)
+
+
+class HeuristicsTests(unittest.TestCase):
+    def test_build_bar(self):
+        samples = {
+            'Since I Left You': {
+                8 : ['sily_08_01.mp3', 'sily_08_02.mp3'],
+                16: ['sily_16_01.mp3', 'sily_16_02.mp3'],
+                32: ['sily_32_01.mp3', 'sily_32_02.mp3'],
+            },
+            'Pablo\'s Cruise': {
+                8 : ['pc_08_01.mp3', 'pc_08_02.mp3'],
+                16: ['pc_16_01.mp3', 'pc_16_02.mp3'],
+                32: ['pc_32_01.mp3', 'pc_32_02.mp3'],
+            }
+        }
+
+        # eh need to make this an actual test
+        bar = heuristics.build_bar(samples, 32)
+        print(bar)

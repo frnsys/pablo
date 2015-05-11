@@ -2,12 +2,13 @@ import essentia
 essentia.log.warningActive = False
 
 import os
+import math
 import click
 import shutil
 import random
 from glob import glob
 from colorama import Fore
-from pablo import analysis, manipulate
+from pablo import analysis, manipulate, heuristics
 from pydub import AudioSegment
 
 
@@ -46,11 +47,29 @@ def analyze(library):
 @cli.command()
 @click.argument('library', type=click.Path(exists=True))
 @click.argument('outdir', type=click.Path())
-@click.option('-C', 'chunk_sizes', default=[8,16,32], help='The chunk sizes to generate samples with. Should be a power of 2', type=list)
+@click.option('-C', 'max_chunk_size', default=32, help='The max chunk size to generate samples with. Should be a power of 2', type=int)
+@click.option('-c', 'min_chunk_size', default=8, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
 @click.option('-S', 'n_songs', default=None, help='The number of songs to include (if enough are available)', type=int)
-@click.option('-M', 'n_samples', default=10, help='The number of samples to use for each track', type=int)
-def mix(library, outdir, chunk_sizes, n_tracks, n_songs, n_samples):
+@click.option('-M', 'length', default=1024, help='The length in beats for the song. Should be a power of 2', type=int)
+def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, length):
+    if max_chunk_size < min_chunk_size:
+        raise Exception('The max chunk size must be larger than the min chunk size')
+
+    n_u = math.log(max_chunk_size, 2)
+    if int(n_u) != n_u:
+        raise Exception('The max chunk size must be a power of 2')
+
+    n_l = math.log(min_chunk_size, 2)
+    if int(n_l) != n_l:
+        raise Exception('The min chunk size must be a power of 2')
+
+    dur = math.log(length, 2)
+    if int(dur) != dur:
+        raise Exception('The song length must be a power of 2')
+
+    chunk_sizes = [2**n for n in range(int(n_l), int(n_u) + 1)]
+
     # Prepare output directory, just to check if the directory is not empty
     outdir = os.path.join(outdir, 'pablo_mix')
     sample_dir = os.path.join(outdir, 'samples')
@@ -98,7 +117,7 @@ def mix(library, outdir, chunk_sizes, n_tracks, n_songs, n_samples):
 
     # Manipulate songs as needed and generate samples
     echo('\n{0}', 'Processing songs', color=Fore.YELLOW)
-    samples = []
+    samples = {}
     for song, bpm, key in selections + [(focal, focal_bpm, focal_key)]:
         filename = os.path.basename(song)
         name, ext = os.path.splitext(filename)
@@ -123,21 +142,22 @@ def mix(library, outdir, chunk_sizes, n_tracks, n_songs, n_samples):
         # Slice according to beats
         echo('\tSlicing')
         beats = analysis.estimate_beats(outfile)
+        samples[name] = {}
         for chunk_size in chunk_sizes:
             prefix = '{0}_{1}_'.format(name, chunk_size)
-            samples += manipulate.beat_slice(outfile,
-                                             beats,
-                                             chunk_size,
-                                             sample_dir,
-                                             prefix=prefix,
-                                             format=ext)
+            samples[name][chunk_size] = manipulate.beat_slice(outfile,
+                                                              beats,
+                                                              chunk_size,
+                                                              sample_dir,
+                                                              prefix=prefix,
+                                                              format=ext)
 
     # Select samples and assemble tracks
     echo('\n{0}', 'Assembling tracks', color=Fore.YELLOW)
     tracks = []
     tracklist = []
     for i in range(n_tracks):
-        selected = random.sample(samples, n_samples)
+        selected = heuristics.build_bar(samples, length)
         sounds = [AudioSegment.from_file(f) for f in selected]
         track = sounds[0].normalize()
         for sound in sounds[1:]:

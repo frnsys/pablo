@@ -102,18 +102,18 @@ def estimate_beats(infile):
     return beats
 
 
-def estimate_main_freq(infile):
+def estimate_main_band(infile):
     """
     Estimate if this is a low, mid, or high track.
 
-    Not really sure if this does what I need it to,
+    Not _really_ sure if this does what I need it to,
     but some quick tests looked right.
     """
     loader = streaming.MonoLoader(filename=infile)
     framecutter = streaming.FrameCutter()
     windowing = streaming.Windowing(type="blackmanharris62")
     spectrum = streaming.Spectrum()
-    freqbands = streaming.FrequencyBands(frequencyBands=[0, 200, 750, 4000])
+    freqbands = streaming.FrequencyBands(frequencyBands=[0, 250, 750, 4000])
     pool = Pool()
 
     loader.audio >> framecutter.signal

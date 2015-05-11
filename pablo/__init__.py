@@ -51,7 +51,7 @@ def analyze(library):
 @click.option('-c', 'min_chunk_size', default=8, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
 @click.option('-S', 'n_songs', default=None, help='The number of songs to include (if enough are available)', type=int)
-@click.option('-M', 'length', default=1024, help='The length in beats for the song. Should be a power of 2', type=int)
+@click.option('-M', 'length', default=512, help='The length in beats for the song. Should be a power of 2', type=int)
 def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, length):
     if max_chunk_size < min_chunk_size:
         raise Exception('The max chunk size must be larger than the min chunk size')
@@ -163,10 +163,11 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
         for sound in sounds[1:]:
             # Remove crossfade to keep timing right? Not sure if necessary
             track = track.append(sound.normalize(), crossfade=0)
-        tracks.append(track)
 
         track_file = os.path.join(outdir, 'track_{0}.mp3'.format(i))
         track.export(track_file, format='mp3')
+        #track = heuristics.eq(track_file)
+        tracks.append(track)
 
         tracklist.append([os.path.basename(s) for s in selected])
 

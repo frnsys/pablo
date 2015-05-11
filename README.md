@@ -43,9 +43,9 @@ There are a few options you can pass in, to learn about them, help is available:
 ## To do
 
 - trim silence to better align beats?
-- heuristics for aligning samples better (e.g. take max chunk size and box-fit into those chunk sizes)
 - smoother transitions by crossfading? but without misaligning samples
-- EQ heuristics? e.g. some samples are only low or mid or high
+- use markov chains for coherence. e.g. 0.5 chance will repeat sample, 0.3 chance will select a sample from the same song, 0.2 chance will select a sample from a different song
+- could favor more "[danceable](http://essentia.upf.edu/documentation/reference/std_Danceability.html)" tracks as rhythm tracks
 
 
 ## Pie-in-the-sky

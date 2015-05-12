@@ -91,7 +91,6 @@ def estimate_key(infile):
     return Key(pool['tonal.key_key'], pool['tonal.key_scale'])
 
 
-
 def estimate_beats(infile):
     """
     Return the estimated beat onsets in seconds for an audio file.
@@ -131,3 +130,16 @@ def estimate_main_band(infile):
         return 'mid'
     elif band == 2:
         return 'high'
+
+
+def estimate_danceability(infile):
+    loader = streaming.MonoLoader(filename=infile)
+    dance = streaming.Danceability()
+    pool = Pool()
+
+    loader.audio >> dance.signal
+    dance.danceability >> (pool, 'danceability')
+
+    run(loader)
+
+    return pool['danceability']

@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from pablo.analysis import estimate_main_band
 from pydub import AudioSegment
 
@@ -32,7 +33,7 @@ def eq(track_file):
         return segm.low_pass_filter(250)
 
 
-def build_bar(samples, n):
+def build_bar(samples, n, prev_sample=None, coherent=True):
     """
     Builds a bar of n beats in length,
     where n >= the shortest sample length.
@@ -59,13 +60,26 @@ def build_bar(samples, n):
             },
             ...
         }
+
+    If `coherent=True`, Pablo will try to build _coherent_ bars:
+
+        - higher probability that the same sample will be re-played
+        - higher probability that the next sample in the sequence will be played
+        - lower probability that the next sample will be from a different song
+
+    This assumes that the samples are in their chronological sequence.
+    That is, that samples i and i+1 for a song are temporally adjacent.
+
+    Returns a list of Samples.
     """
 
     # Find samples of length n
-    full_bar_samples = []
     sample_sizes = set()
+    full_bar_samples = defaultdict(list)
     for song, chunk_groups in samples.items():
-        full_bar_samples += chunk_groups.get(n, [])
+        samps = chunk_groups.get(n, [])
+        if samps:
+            full_bar_samples[song] += [Sample(s, song, n, i) for i, s in enumerate(samps)]
         sample_sizes = sample_sizes.union(set(chunk_groups.keys()))
 
     if n < min(sample_sizes):
@@ -74,17 +88,64 @@ def build_bar(samples, n):
     # If this is the smallest sample size,
     # we can only return full bars.
     if n == min(sample_sizes):
-        return [random.choice(full_bar_samples)]
+        if coherent:
+            return _select_sample(full_bar_samples, n, prev_sample)
+        else:
+            song = random.choice(samples.keys())
+            return [random.choice(samples[song])]
 
     # Slightly favor complete bars, if available
     if full_bar_samples and random.random() <= 0.6:
-        return [random.choice(full_bar_samples)]
+        if coherent:
+            return _select_sample(full_bar_samples, n, prev_sample)
+        else:
+            song = random.choice(samples.keys())
+            return [random.choice(samples[song])]
 
     # Otherwise, assemble the bar from sub-bars.
     bar = []
     length = 0
     while length < n:
-        bar += build_bar(samples, n/2)
+        bar += build_bar(samples, n/2, prev_sample=prev_sample)
         length += n/2
+        prev_sample = bar[-1]
 
     return bar
+
+
+def _select_sample(samples, length, prev_sample):
+    """
+    Selects a sample via a markov chain
+
+    Samples should be in the form:
+
+        {
+            'song_name': [ ... samples ... ],
+            ...
+        }
+    """
+    if prev_sample is not None:
+        song = prev_sample.song
+
+        # Repeat the sample
+        if random.random() <= 0.6:
+            return [prev_sample]
+
+        # The previous sample may be of a different length than
+        # the current one, so convert its index.
+        nidx = (prev_sample.length/length * prev_sample.index) + 1
+        if len(samples[song]) > nidx and random.random() <= 0.5:
+            # Play the next chronological sample from the song
+            return [samples[song][nidx]]
+
+    # Otherwise, return a random sample from a random song
+    song = random.choice(samples.keys())
+    return [random.choice(samples[song])]
+
+
+class Sample():
+    def __init__(self, file, song, length, index):
+        self.file = file
+        self.song = song
+        self.length = length
+        self.index = index

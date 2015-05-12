@@ -42,9 +42,8 @@ There are a few options you can pass in, to learn about them, help is available:
 
 ## To do
 
-- trim silence to better align beats?
+- better beat alignment?
 - smoother transitions by crossfading? but without misaligning samples
-- use markov chains for coherence. e.g. 0.5 chance will repeat sample, 0.3 chance will select a sample from the same song, 0.2 chance will select a sample from a different song
 - could favor more "[danceable](http://essentia.upf.edu/documentation/reference/std_Danceability.html)" tracks as rhythm tracks
 
 

@@ -164,7 +164,7 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
     tracks = []
     tracklist = []
     for i in range(n_tracks):
-        selected = heuristics.build_bar(samples, length)
+        selected = [s.file for s in heuristics.build_bar(samples, length)]
         sounds = [AudioSegment.from_file(f) for f in selected]
         track = sounds[0].normalize()
         for sound in sounds[1:]:

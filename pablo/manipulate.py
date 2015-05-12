@@ -57,3 +57,20 @@ def slice(infile, start, end, outfile):
         outfile
     ], stdout=DEVNULL, stderr=DEVNULL)
     return outfile
+
+
+def trim_silence(infile, outfile):
+    """
+    Remove silence from the beginning of a song.
+    <http://digitalcardboard.com/blog/2009/08/25/the-sox-of-silence/>
+    """
+    subprocess.call([
+        'sox',
+        infile,
+        outfile,
+        'silence',
+        '1',
+        '0.1',
+        '1%'
+    ])
+    return outfile

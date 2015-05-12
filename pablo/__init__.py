@@ -139,16 +139,23 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
             manipulate.tempo_stretch(outfile, bpm, focal_bpm, tmpfile)
             shutil.move(tmpfile, outfile)
 
+        # Trim silence
+        echo('\tTrimming silence')
+        manipulate.trim_silence(outfile, tmpfile)
+        shutil.move(tmpfile, outfile)
+
         # Slice according to beats
         echo('\tSlicing')
         beats = analysis.estimate_beats(outfile)
         samples[name] = {}
+        song_sample_dir = os.path.join(sample_dir, name)
+        os.makedirs(song_sample_dir)
         for chunk_size in chunk_sizes:
             prefix = '{0}_{1}_'.format(name, chunk_size)
             samples[name][chunk_size] = manipulate.beat_slice(outfile,
                                                               beats,
                                                               chunk_size,
-                                                              sample_dir,
+                                                              song_sample_dir,
                                                               prefix=prefix,
                                                               format=ext)
 

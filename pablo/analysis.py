@@ -5,7 +5,7 @@ The Essentia python bindings are really unintuitive.
 """
 
 import numpy as np
-from pablo.key import Key
+from pablo.models import Key
 from pablo.datastore import save, load
 from essentia import Pool, run, standard, streaming
 
@@ -42,7 +42,7 @@ def estimate_bpm(infile):
     loader.audio >> bt.signal
     bt.bpm >> (pool, 'bpm')
     bt.ticks >> None
-    bt.confidence >> None
+    bt.confidence >> (pool, 'confidence')
     bt.estimates >> None
     bt.bpmIntervals >> bpm_histogram.bpmIntervals
     bpm_histogram.firstPeakBPM >> (pool, 'bpm_first_peak')
@@ -97,7 +97,7 @@ def estimate_beats(infile):
     """
     audio = standard.MonoLoader(filename=infile)()
     bt = standard.BeatTrackerMultiFeature()
-    beats, _ = bt(audio)
+    beats, confidence = bt(audio)
     return beats
 
 
@@ -143,3 +143,13 @@ def estimate_danceability(infile):
     run(loader)
 
     return pool['danceability']
+
+
+def duration(infile):
+    """
+    Returns the duration of a song in seconds.
+    """
+    dur = standard.Duration()
+    audio = standard.MonoLoader(filename=infile)()
+    duration = dur(audio)
+    return duration

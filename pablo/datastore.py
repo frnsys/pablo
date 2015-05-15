@@ -1,8 +1,13 @@
+import os
 import sqlite3
 import hashlib
 
+pablo_dir = os.path.expanduser('~/.pablo')
+if not os.path.exists(pablo_dir):
+    os.makedirs(pablo_dir)
+db_file = os.path.join(pablo_dir, 'songs.db')
 
-conn = sqlite3.connect('songs.db')
+conn = sqlite3.connect(db_file)
 c = conn.cursor()
 c.execute('CREATE TABLE IF NOT EXISTS songs (hash text, bpm real, key text, scale text)')
 

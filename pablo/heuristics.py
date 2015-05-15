@@ -1,6 +1,8 @@
 import random
+import shutil
+from itertools import chain
 from collections import defaultdict
-from pablo.analysis import estimate_main_band
+from pablo.analysis import estimate_main_band, duration
 from pydub import AudioSegment
 
 
@@ -54,8 +56,8 @@ def build_bar(samples, n, prev_sample=None, coherent=True):
 
         {
             'song name': {
-                8:  [ ... samples ... ],
-                16: [ ... samples ... ],
+                8:  [(sample,), ...],
+                16: [(sample, sample), ...],
                 ...
             },
             ...
@@ -79,7 +81,7 @@ def build_bar(samples, n, prev_sample=None, coherent=True):
     for song, chunk_groups in samples.items():
         samps = chunk_groups.get(n, [])
         if samps:
-            full_bar_samples[song] += [Sample(s, song, n, i) for i, s in enumerate(samps)]
+            full_bar_samples[song] += [Sample(s, song, n, i) for i, s in enumerate(samps) if s is not None]
         sample_sizes = sample_sizes.union(set(chunk_groups.keys()))
 
     if n < min(sample_sizes):
@@ -143,9 +145,79 @@ def _select_sample(samples, length, prev_sample):
     return [random.choice(samples[song])]
 
 
+def filter_samples(samples):
+    """
+    Filters samples to those that are of the most popular duration.
+
+    The beat slicing slices samples of varying duration; even very slight variations
+    will lead to beat slippage. So we compare sample durations and select only the
+    duration with the most samples.
+
+    I tried including samples from within a range of +- 0.05s of this duration and
+    then time stretching them, but time stretching (at least with sox)
+    is imprecise enough that it doesn't produce samples of the desired length.
+
+    So we lose some of samples, but at least we don't have sneakers in the dryer.
+
+    Samples should be input in the form:
+
+        {
+            'song name': [ ... samples ... ],
+            ...
+        }
+
+    Returns a new dict of samples in the same form, just with
+    inconsistently long or short samples replaced with None.
+    This way the temporal adjacency structure of the samples is preserved,
+    just with gaps.
+    """
+
+    # Group samples by sample size and duration
+    durs = defaultdict(list)
+    for song, samps in samples.items():
+        for s in samps:
+            dur = duration(s)
+            durs[dur].append(s)
+
+    # Identify the duration with the most samples
+    best = max(durs.keys(), key=lambda d: len(durs[d]))
+
+    # Remove the non-qualifying samples
+    for song, samps in samples.items():
+        samples[song] = [s if s in durs[best] else None for s in samps]
+
+    return samples
+
+
+def assemble_samples(samples):
+    """
+    Generates samples of the next largest size (n*2).
+
+    Samples should be in the form:
+
+        [(sample,), ...]
+
+    That is, each sample should be represented as a tuple of its constituent samples.
+
+    This iterates over samples as non-overlapping pairs,
+    adding a complete tuple if the pair consists of
+    two present samples or None otherwise.
+    """
+
+    larger_samples = []
+    for s1, s2 in zip(samples[::2], samples[1::2]):
+        if s1 is None or s2 is None:
+            larger_samples.append(None)
+        else:
+            larger_samples.append(s1 + s2)
+
+    return larger_samples
+
+
+
 class Sample():
-    def __init__(self, file, song, length, index):
-        self.file = file
+    def __init__(self, parts, song, length, index):
+        self.parts = parts
         self.song = song
         self.length = length
         self.index = index

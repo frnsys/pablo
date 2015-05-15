@@ -1,5 +1,6 @@
 import essentia
 essentia.log.warningActive = False
+essentia.log.infoActive = False
 
 import os
 import math
@@ -8,11 +9,10 @@ import shutil
 import random
 from glob import glob
 from colorama import Fore
-from pablo import analysis, manipulate, heuristics
-from pydub import AudioSegment
+from pablo import analysis, mutate, heuristics, producer
 
 
-formats = ['mp3', 'wav']
+formats = ['mp3', 'wav', 'aif']
 
 
 @click.group()
@@ -45,14 +45,81 @@ def analyze(library):
 
 
 @cli.command()
+@click.argument('song', type=click.Path(exists=True))
+@click.argument('library', type=click.Path(exists=True))
+@click.option('-O', 'outdir', default=None, help='Copy the compatible songs to this directory', type=click.Path())
+@click.option('--keyshift', is_flag=True, help='If -O has been set, this will key shift the copied songs as necessary')
+def compatible(song, library, outdir, keyshift):
+    """
+    Returns mix-compatible songs for the given song in the given library.
+    """
+    focal_bpm, focal_key = analysis.analyze(song)
+
+    echo('Finding compatible songs for {0}', song, color=Fore.CYAN)
+    echo('\tBPM: {0}', focal_bpm)
+    echo('\tKey: {0} ({1})', focal_key.key, focal_key.scale)
+
+    # Search for songs that require relatively small modifications
+    # to match the focal song
+    bpm_range_l = 0.85 * focal_bpm
+    bpm_range_u = 1.15 * focal_bpm
+    key_range = 3
+
+    echo('Using library at {0}', library, color=Fore.CYAN)
+
+    files = []
+    for fmt in formats:
+        files += glob(os.path.join(library, '*.{0}'.format(fmt)))
+
+    echo('Working with {0} songs', len(files))
+
+    # Select appropriate songs to mix
+    echo('\n{0}', 'Compatible songs:', color=Fore.YELLOW)
+    selections = []
+
+    while files:
+        song = files.pop()
+        bpm, key = analysis.analyze(song)
+        if bpm_range_l <= bpm <= bpm_range_u and (focal_key.mixable(key) or abs(focal_key.distance(key)) <= key_range):
+            selections.append(song)
+            echo('{0}', song, color=Fore.CYAN)
+
+    if outdir is not None:
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        for song in selections:
+            fname = os.path.basename(song)
+            outfile = os.path.join(outdir, fname)
+
+            if keyshift and not focal_key.mixable(key):
+                bpm, key = analysis.analyze(song)
+                mutate.key_shift(song, key, focal_key, outfile)
+            else:
+                shutil.copy(song, outfile)
+
+
+@cli.command()
+@click.argument('song', type=click.Path(exists=True))
+def analyze_song(song):
+    """
+    Analyze a single song.
+    """
+    bpm, key = analysis.analyze(song)
+    echo('\tBPM: {0}', bpm)
+    echo('\tKey: {0} ({1})', key.key, key.scale)
+
+
+@cli.command()
 @click.argument('library', type=click.Path(exists=True))
 @click.argument('outdir', type=click.Path())
 @click.option('-C', 'max_chunk_size', default=32, help='The max chunk size to generate samples with. Should be a power of 2', type=int)
-@click.option('-c', 'min_chunk_size', default=8, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
+@click.option('-c', 'min_chunk_size', default=16, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
 @click.option('-S', 'n_songs', default=None, help='The number of songs to include (if enough are available)', type=int)
 @click.option('-M', 'length', default=512, help='The length in beats for the song. Should be a power of 2', type=int)
-def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, length):
+@click.option('--debug', is_flag=True, help='If set, will debug with click track')
+@click.option('--incoherent', is_flag=True, help='Make an "incoherent" mix (don\'t use markov chains)')
+def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, length, incoherent, debug):
     if max_chunk_size < min_chunk_size:
         raise Exception('The max chunk size must be larger than the min chunk size')
 
@@ -98,7 +165,7 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
     # to match the focal song
     bpm_range_l = 0.85 * focal_bpm
     bpm_range_u = 1.15 * focal_bpm
-    key_range = 3
+    key_range = 6
 
     # Select appropriate songs to mix
     n = n_songs if n_songs is not None else random.randint(4, 10)
@@ -115,7 +182,7 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
         else:
             echo('\tSkipping')
 
-    # Manipulate songs as needed and generate samples
+    # Mutate songs as needed and generate samples
     echo('\n{0}', 'Processing songs', color=Fore.YELLOW)
     samples = {}
     for song, bpm, key in selections + [(focal, focal_bpm, focal_key)]:
@@ -131,62 +198,73 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
         # Process as necessary
         if not focal_key.mixable(key):
             echo('\tChanging key')
-            manipulate.key_shift(outfile, key, focal_key, tmpfile)
+            mutate.key_shift(outfile, key, focal_key, tmpfile)
             shutil.move(tmpfile, outfile)
 
         if focal_bpm != bpm:
             echo('\tChanging bpm')
-            manipulate.tempo_stretch(outfile, bpm, focal_bpm, tmpfile)
+            mutate.tempo_stretch(outfile, bpm, focal_bpm, tmpfile)
             shutil.move(tmpfile, outfile)
 
         # Trim silence
         echo('\tTrimming silence')
-        manipulate.trim_silence(outfile, tmpfile)
+        mutate.trim_silence(outfile, tmpfile)
         shutil.move(tmpfile, outfile)
 
         # Slice according to beats
         echo('\tSlicing')
         beats = analysis.estimate_beats(outfile)
+
+        # If debug is set, add click track to check beat alignment
+        if debug:
+            mutate.add_click(outfile, beats, tmpfile)
+            shutil.move(tmpfile, outfile)
+
         samples[name] = {}
         song_sample_dir = os.path.join(sample_dir, name)
         os.makedirs(song_sample_dir)
-        for chunk_size in chunk_sizes:
-            prefix = '{0}_{1}_'.format(name, chunk_size)
-            samples[name][chunk_size] = manipulate.beat_slice(outfile,
-                                                              beats,
-                                                              chunk_size,
-                                                              song_sample_dir,
-                                                              prefix=prefix,
-                                                              format=ext)
+
+        # Assemble samples of the smallest chunk size
+        # They will be combined later into larger chunks
+        prefix = '{0}_{1}_'.format(name, min_chunk_size)
+        samples[name] = mutate.beat_slice(outfile,
+                                          beats,
+                                          min_chunk_size,
+                                          song_sample_dir,
+                                          prefix=prefix,
+                                          format=ext)
+
+    # Remove samples which have irregular duration
+    samples = heuristics.filter_samples(samples)
+
+    # Wrangle into the proper format
+    # (this could all use a refactor)
+    new_samps = {}
+    for song, samps in samples.items():
+        new_samps[song] = {
+            min_chunk_size: [(s,) if s is not None else None for s in samps]
+        }
+    samples = new_samps
+
+    # Create samples of larger chunk sizes.
+    for size, new_size in zip(chunk_sizes, chunk_sizes[1:]):
+        for song, samps in samples.items():
+            samples[song][new_size] = heuristics.assemble_samples(samples[song][size])
+
 
     # Select samples and assemble tracks
     echo('\n{0}', 'Assembling tracks', color=Fore.YELLOW)
-    tracks = []
-    tracklist = []
-    for i in range(n_tracks):
-        selected = [s.file for s in heuristics.build_bar(samples, length)]
-        sounds = [AudioSegment.from_file(f) for f in selected]
-        track = sounds[0].normalize()
-        for sound in sounds[1:]:
-            # Remove crossfade to keep timing right? Not sure if necessary
-            track = track.append(sound.normalize(), crossfade=0)
-
-        track_file = os.path.join(outdir, 'track_{0}.mp3'.format(i))
-        track.export(track_file, format='mp3')
-        #track = heuristics.eq(track_file)
-        tracks.append(track)
-
-        tracklist.append([os.path.basename(s) for s in selected])
+    tracks, tracklist = producer.produce_tracks(samples,
+                                                outdir,
+                                                length=length,
+                                                coherent=not incoherent,
+                                                n_tracks=n_tracks)
 
     # Overlay the tracks
     echo('\n{0}', 'Assembling mix', color=Fore.YELLOW)
-    out_mix = tracks[0]
-    for track in tracks[1:]:
-        out_mix = out_mix.overlay(track)
 
-    # Save the mix
     mix_file = os.path.join(outdir, '_mix.mp3')
-    out_mix.export(mix_file, format='mp3')
+    producer.produce_mix(tracks, mix_file, format='mp3')
 
     # Write the tracklist
     tracklisting = '\n\n---\n\n'.join(['\n'.join(tl) for tl in tracklist])

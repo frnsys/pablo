@@ -70,3 +70,12 @@ class HeuristicsTests(unittest.TestCase):
         # eh need to make this an actual test
         bar = heuristics.build_bar(samples, 32)
         print(bar)
+
+
+    def test_assemble_samples(self):
+        samples = [('a',), ('b',), None, ('c',), ('d',), ('e',)]
+        samples_ = heuristics.assemble_samples(samples)
+        self.assertEqual(samples_, [('a','b'), None, ('d', 'e')])
+
+        samples_ = heuristics.assemble_samples(samples_)
+        self.assertEqual(samples_, [None])

@@ -113,7 +113,7 @@ def analyze_song(song):
 @click.argument('library', type=click.Path(exists=True))
 @click.argument('outdir', type=click.Path())
 @click.option('-C', 'max_chunk_size', default=32, help='The max chunk size to generate samples with. Should be a power of 2', type=int)
-@click.option('-c', 'min_chunk_size', default=16, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
+@click.option('-c', 'min_chunk_size', default=8, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
 @click.option('-S', 'n_songs', default=None, help='The number of songs to include (if enough are available)', type=int)
 @click.option('-M', 'length', default=512, help='The length in beats for the song. Should be a power of 2', type=int)
@@ -261,7 +261,7 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
                                                 n_tracks=n_tracks)
 
     # Overlay the tracks
-    echo('\n{0}', 'Assembling mix', color=Fore.YELLOW)
+    echo('{0}', 'Assembling mix', color=Fore.YELLOW)
 
     mix_file = os.path.join(outdir, '_mix.mp3')
     producer.produce_mix(tracks, mix_file, format='mp3')
@@ -272,4 +272,4 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
     with open(trl_file, 'w') as f:
         f.write(tracklisting)
 
-    echo('\n{0}', 'Done')
+    echo('\n{0}', 'The new pablo track just dropped ~ (done)')

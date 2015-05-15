@@ -113,6 +113,7 @@ def analyze_song(song):
 @cli.command()
 @click.argument('library', type=click.Path(exists=True))
 @click.argument('outdir', type=click.Path())
+@click.option('-F', 'focal', default=None, help='The song to base the mix around', type=click.Path(exists=True))
 @click.option('-C', 'max_chunk_size', default=32, help='The max chunk size to generate samples with. Should be a power of 2', type=int)
 @click.option('-c', 'min_chunk_size', default=8, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
@@ -120,24 +121,29 @@ def analyze_song(song):
 @click.option('-M', 'length', default=512, help='The length in beats for the song. Should be a power of 2', type=int)
 @click.option('--debug', is_flag=True, help='If set, will debug with click track')
 @click.option('--incoherent', is_flag=True, help='Make an "incoherent" mix (don\'t use markov chains)')
-def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, length, incoherent, debug):
+def mix(library, outdir, focal, max_chunk_size, min_chunk_size, n_tracks, n_songs, length, incoherent, debug):
     if max_chunk_size < min_chunk_size:
-        raise Exception('The max chunk size must be larger than the min chunk size')
+        echo('{0}', 'The max chunk size must be larger than the min chunk size', color=Fore.RED)
+        return
 
     n_u = math.log(max_chunk_size, 2)
     if int(n_u) != n_u:
-        raise Exception('The max chunk size must be a power of 2')
+        echo('{0}', 'The max chunk size must be a power of 2', color=Fore.RED)
+        return
 
     n_l = math.log(min_chunk_size, 2)
     if int(n_l) != n_l:
-        raise Exception('The min chunk size must be a power of 2')
+        echo('{0}', 'The min chunk size must be a power of 2', color=Fore.RED)
+        return
 
     dur = math.log(length, 2)
     if int(dur) != dur:
-        raise Exception('The song length must be a power of 2')
+        echo('{0}', 'The song length must be a power of 2', color=Fore.RED)
+        return
 
     if n_songs is not None and n_tracks > n_songs:
-        raise Exception('There must be at least as many songs as there are tracks')
+        echo('{0}', 'There must be at least as many songs as there are tracks', color=Fore.RED)
+        return
 
     chunk_sizes = [2**n for n in range(int(n_l), int(n_u) + 1)]
 
@@ -145,7 +151,8 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
     outdir = os.path.join(outdir, 'pablo_mix')
     sample_dir = os.path.join(outdir, 'samples')
     if os.path.exists(outdir) and os.listdir(outdir):
-        raise Exception('Output directory is not empty')
+        echo('{0}', 'Output directory is not empty', color=Fore.RED)
+        return
     os.makedirs(sample_dir)
 
     echo('Using library at {0}', library, color=Fore.CYAN)
@@ -156,9 +163,11 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
 
     echo('Working with {0} songs', len(files))
 
-    # Select a song to base the mix around
     random.shuffle(files)
-    focal = files.pop()
+
+    # Select a song to base the mix around
+    if focal is None:
+        focal = files.pop()
     focal_bpm, focal_key = analysis.analyze(focal)
 
     echo('\nFocal song: {0}', focal, color=Fore.YELLOW)

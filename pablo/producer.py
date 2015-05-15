@@ -1,5 +1,5 @@
 import os
-from pablo import heuristics
+from pablo import heuristics, analysis
 from pydub import AudioSegment
 
 
@@ -9,6 +9,7 @@ def produce_tracks(samples, outdir, length=256, coherent=True, n_tracks=2):
     """
     tracks = []
     tracklist = []
+
     for i in range(n_tracks):
         selected = [s.parts for s in heuristics.build_bar(samples, length, coherent=coherent)]
 
@@ -19,12 +20,18 @@ def produce_tracks(samples, outdir, length=256, coherent=True, n_tracks=2):
         track = sounds[0].normalize()
         for sound in sounds[1:]:
             # Remove crossfade to keep timing right? Not sure if necessary
-            track = track.append(sound.normalize(), crossfade=0)
+            track = track.append(sound.normalize(), crossfade=15)
 
         track_file = os.path.join(outdir, 'track_{0}.mp3'.format(i))
         track.export(track_file, format='mp3')
         tracks.append(track)
-        tracklist.append([os.path.basename(f) for f in files])
+
+        time = 0
+        timeline = []
+        for f in files:
+            timeline.append((time, os.path.basename(f)))
+            time += analysis.duration(f)
+        tracklist.append(timeline)
 
     return tracks, tracklist
 

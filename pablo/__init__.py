@@ -267,7 +267,7 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
     producer.produce_mix(tracks, mix_file, format='mp3')
 
     # Write the tracklist
-    tracklisting = '\n\n---\n\n'.join(['\n'.join(tl) for tl in tracklist])
+    tracklisting = '\n\n---\n\n'.join(['\n'.join(['{0}\t{1}'.format(t, s) for t, s in tl]) for tl in tracklist])
     trl_file = os.path.join(outdir, '_tracklist.txt')
     with open(trl_file, 'w') as f:
         f.write(tracklisting)

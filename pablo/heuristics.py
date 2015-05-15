@@ -130,18 +130,19 @@ def _select_sample(samples, length, prev_sample):
         song = prev_sample.song
 
         # Repeat the sample
-        if random.random() <= 0.6:
+        if random.random() <= 0.3:
             return [prev_sample]
 
         # The previous sample may be of a different length than
         # the current one, so convert its index.
         nidx = (prev_sample.length/length * prev_sample.index) + 1
-        if len(samples[song]) > nidx and random.random() <= 0.5:
+        if len(samples[song]) > nidx and random.random() <= 0.75:
             # Play the next chronological sample from the song
             return [samples[song][nidx]]
 
     # Otherwise, return a random sample from a random song
-    song = random.choice(samples.keys())
+    # It's possible that some songs don't have samples to choose from
+    song = random.choice([k for k in samples.keys() if samples[k]])
     return [random.choice(samples[song])]
 
 

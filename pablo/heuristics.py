@@ -1,7 +1,6 @@
 import random
-import shutil
-from itertools import chain
 from collections import defaultdict
+from pablo.models.sample import Sample
 from pablo.analysis import estimate_main_band, duration
 from pydub import AudioSegment
 
@@ -35,7 +34,27 @@ def eq(track_file):
         return segm.low_pass_filter(250)
 
 
-def build_bar(samples, n, prev_sample=None, coherent=True):
+def build_tracks(songs, length, n_tracks, coherent=True):
+    """
+    Builds multiple tracks so that samples from the same song
+    are never playing simultaneously.
+    """
+    # Build the first track
+    track = build_bar(songs, length, coherent=coherent)
+
+    # Convert to a flattened list of slices
+    track = sum([s.slices for s in track], ())
+
+    tracks = [track]
+    for i in range(n_tracks-1):
+        track_ = build_bar(songs, length, coherent=coherent, tracks=tracks)
+        track_ = sum([s.slices for s in track_], ())
+        tracks.append(track_)
+
+    return tracks
+
+
+def build_bar(songs, n, prev_sample=None, coherent=True, tracks=[], bar_position=0):
     """
     Builds a bar of n beats in length,
     where n >= the shortest sample length.
@@ -52,17 +71,6 @@ def build_bar(samples, n, prev_sample=None, coherent=True):
 
     A bar is returned as a list of samples.
 
-    Samples should be input in the form:
-
-        {
-            'song name': {
-                8:  [(sample,), ...],
-                16: [(sample, sample), ...],
-                ...
-            },
-            ...
-        }
-
     If `coherent=True`, Pablo will try to build _coherent_ bars:
 
         - higher probability that the same sample will be re-played
@@ -74,42 +82,51 @@ def build_bar(samples, n, prev_sample=None, coherent=True):
 
     Returns a list of Samples.
     """
+    if len(tracks) >= len(songs):
+        raise Exception('Must have more songs available than overlaid tracks')
+
+    # Remove any songs which are simultaneously playing in other tracks.
+    invalid_songs = []
+    for track in tracks:
+        invalid_songs.append(track[bar_position].song)
+    songs = [s for s in songs if s not in invalid_songs]
 
     # Find samples of length n
-    sample_sizes = set()
-    full_bar_samples = defaultdict(list)
-    for song, chunk_groups in samples.items():
-        samps = chunk_groups.get(n, [])
-        if samps:
-            full_bar_samples[song] += [Sample(s, song, n, i) for i, s in enumerate(samps) if s is not None]
-        sample_sizes = sample_sizes.union(set(chunk_groups.keys()))
+    full_bar_samples = {}
+    for song in songs:
+        if n in song.sizes:
+            full_bar_samples[song.name] = [s for s in song[n] if s is not None]
 
-    if n < min(sample_sizes):
+    min_size = min(s.min_size for s in songs)
+
+    if n < min_size:
         raise Exception('Can\'t create a bar shorter than the shortest sample')
 
     # If this is the smallest sample size,
     # we can only return full bars.
-    if n == min(sample_sizes):
+    if n == min_size:
         if coherent:
             return _select_sample(full_bar_samples, n, prev_sample)
         else:
-            song = random.choice(samples.keys())
-            return [random.choice(samples[song])]
+            song = random.choice(full_bar_samples.keys())
+            return [random.choice(full_bar_samples[song])]
 
     # Slightly favor complete bars, if available
     if full_bar_samples and random.random() <= 0.6:
         if coherent:
             return _select_sample(full_bar_samples, n, prev_sample)
         else:
-            song = random.choice(samples.keys())
-            return [random.choice(samples[song])]
+            song = random.choice(full_bar_samples.keys())
+            return [random.choice(full_bar_samples[song])]
 
     # Otherwise, assemble the bar from sub-bars.
     bar = []
     length = 0
     while length < n:
-        bar += build_bar(samples, n/2, prev_sample=prev_sample)
-        length += n/2
+        n_ = n/2
+        bar += build_bar(songs, n_, prev_sample=prev_sample, bar_position=bar_position, tracks=tracks)
+        bar_position += n_/min_size
+        length += n_
         prev_sample = bar[-1]
 
     return bar
@@ -133,12 +150,11 @@ def _select_sample(samples, length, prev_sample):
         if random.random() <= 0.3:
             return [prev_sample]
 
-        # The previous sample may be of a different length than
-        # the current one, so convert its index.
-        nidx = (prev_sample.length/length * prev_sample.index) + 1
-        if len(samples[song]) > nidx and random.random() <= 0.75:
-            # Play the next chronological sample from the song
-            return [samples[song][nidx]]
+        # Play the next chronological sample from the song (if available)
+        if random.random() <= 0.75:
+            next_sample = song.next_sample(prev_sample, length)
+            if next_sample is not None:
+                return [next_sample]
 
     # Otherwise, return a random sample from a random song
     # It's possible that some songs don't have samples to choose from
@@ -146,48 +162,48 @@ def _select_sample(samples, length, prev_sample):
     return [random.choice(samples[song])]
 
 
-def filter_samples(samples):
+def filter_slices(slices):
     """
-    Filters samples to those that are of the most popular duration.
+    Filters slices to those that are of the most popular duration.
 
-    The beat slicing slices samples of varying duration; even very slight variations
+    The beat slicing slices slices of varying duration; even very slight variations
     will lead to beat slippage. So we compare sample durations and select only the
-    duration with the most samples.
+    duration with the most slices.
 
-    I tried including samples from within a range of +- 0.05s of this duration and
+    I tried including slices from within a range of +- 0.05s of this duration and
     then time stretching them, but time stretching (at least with sox)
-    is imprecise enough that it doesn't produce samples of the desired length.
+    is imprecise enough that it doesn't produce slices of the desired length.
 
-    So we lose some of samples, but at least we don't have sneakers in the dryer.
+    So we lose some of slices, but at least we don't have sneakers in the dryer.
 
-    Samples should be input in the form:
+    Slices should be input in the form:
 
         {
-            'song name': [ ... samples ... ],
+            song: [ <Slice>, ... ],
             ...
         }
 
-    Returns a new dict of samples in the same form, just with
-    inconsistently long or short samples replaced with None.
-    This way the temporal adjacency structure of the samples is preserved,
+    Returns a new dict of slices in the same form, just with
+    inconsistently long or short slices replaced with None.
+    This way the temporal adjacency structure of the slices is preserved,
     just with gaps.
     """
 
-    # Group samples by sample size and duration
+    # Group slices by sample size and duration
     durs = defaultdict(list)
-    for song, samps in samples.items():
-        for s in samps:
-            dur = duration(s)
+    for song, slics in slices.items():
+        for s in slics:
+            dur = duration(s.file)
             durs[dur].append(s)
 
-    # Identify the duration with the most samples
+    # Identify the duration with the most slices
     best = max(durs.keys(), key=lambda d: len(durs[d]))
 
-    # Remove the non-qualifying samples
-    for song, samps in samples.items():
-        samples[song] = [s if s in durs[best] else None for s in samps]
+    # Remove the non-qualifying slices
+    for song, slics in slices.items():
+        slices[song] = [s if s in durs[best] else None for s in slics]
 
-    return samples
+    return slices
 
 
 def assemble_samples(samples):
@@ -196,7 +212,7 @@ def assemble_samples(samples):
 
     Samples should be in the form:
 
-        [(sample,), ...]
+        [ <Sample>, ... ]
 
     That is, each sample should be represented as a tuple of its constituent samples.
 
@@ -204,21 +220,24 @@ def assemble_samples(samples):
     adding a complete tuple if the pair consists of
     two present samples or None otherwise.
     """
+    # Assuming samples are of the same length
+    # and from the same song (they should be)
+    samp = next((s for s in samples if s is not None), None)
+
+    # If this is None, that means no slices
+    # successfully made it through filtering
+    if samp is None:
+        return [None for _ in samples]
+
+    n = samp.size * 2
+    song = samp.song
 
     larger_samples = []
-    for s1, s2 in zip(samples[::2], samples[1::2]):
+    for i, (s1, s2) in enumerate(zip(samples[::2], samples[1::2])):
         if s1 is None or s2 is None:
             larger_samples.append(None)
         else:
-            larger_samples.append(s1 + s2)
+            sample = Sample(s1.slices + s2.slices, song, n, i)
+            larger_samples.append(sample)
 
     return larger_samples
-
-
-
-class Sample():
-    def __init__(self, parts, song, length, index):
-        self.parts = parts
-        self.song = song
-        self.length = length
-        self.index = index

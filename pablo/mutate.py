@@ -1,6 +1,6 @@
 import os
 import subprocess
-from essentia import standard, common
+from essentia import standard
 
 try:
     from subprocess import DEVNULL
@@ -22,7 +22,6 @@ def tempo_stretch(infile, from_bpm, to_bpm, outfile):
 
 
 def time_stretch(infile, from_time, to_time, outfile):
-    print('\tratio:{0}'.format(to_time/from_time))
     return tempo_stretch(infile, from_time, to_time, outfile)
 
 
@@ -38,27 +37,6 @@ def key_shift(infile, from_key, to_key, outfile):
     ])
     return outfile
 
-
-#def beat_slice(infile, beats, chunk_size, outdir, prefix='', format='mp3'):
-    #outfiles = []
-    #format = format.strip('.')
-    #chunks = [beats[i:i + chunk_size] for i in range(0, len(beats), chunk_size)]
-    #starts, ends = zip(*[(c[0], c[-1]) for c in chunks])
-    #starts, ends = common.array(starts), common.array(ends)
-
-    #audio = standard.MonoLoader(filename=infile)()
-    #slices = standard.Slicer(startTimes=starts, endTimes=ends, timeUnits='seconds')(audio)
-
-    #for i, slice in enumerate(slices):
-        #outfile = '{0}{1}.{2}'.format(prefix, i, format)
-        #outfile = os.path.join(outdir, outfile)
-        #standard.MonoWriter(filename=outfile, format=format)(slice)
-
-        ## Sometimes Essentia doesn't actually save the file?
-        #if os.path.exists(outfile):
-            #outfiles.append(outfile)
-
-    #return outfiles
 
 def beat_slice(infile, beats, chunk_size, outdir, prefix='', format='mp3'):
     outfiles = []

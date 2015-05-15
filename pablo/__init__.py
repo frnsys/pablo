@@ -1,6 +1,5 @@
 import essentia
 essentia.log.warningActive = False
-essentia.log.infoActive = False
 
 import os
 import math
@@ -10,6 +9,8 @@ import random
 from glob import glob
 from colorama import Fore
 from pablo import analysis, mutate, heuristics, producer
+from pablo.models.sample import Slice
+from pablo.models.song import Song
 
 
 formats = ['mp3', 'wav', 'aif']
@@ -135,6 +136,9 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
     if int(dur) != dur:
         raise Exception('The song length must be a power of 2')
 
+    if n_songs is not None and n_tracks > n_songs:
+        raise Exception('There must be at least as many songs as there are tracks')
+
     chunk_sizes = [2**n for n in range(int(n_l), int(n_u) + 1)]
 
     # Prepare output directory, just to check if the directory is not empty
@@ -168,7 +172,7 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
     key_range = 6
 
     # Select appropriate songs to mix
-    n = n_songs if n_songs is not None else random.randint(4, 10)
+    n = n_songs if n_songs is not None else random.randint(n_tracks+2, n_tracks+6)
     selections = []
     echo('\nSelecting {0} other songs', n)
 
@@ -184,7 +188,7 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
 
     # Mutate songs as needed and generate samples
     echo('\n{0}', 'Processing songs', color=Fore.YELLOW)
-    samples = {}
+    slices = {}
     for song, bpm, key in selections + [(focal, focal_bpm, focal_key)]:
         filename = os.path.basename(song)
         name, ext = os.path.splitext(filename)
@@ -220,41 +224,29 @@ def mix(library, outdir, max_chunk_size, min_chunk_size, n_tracks, n_songs, leng
             mutate.add_click(outfile, beats, tmpfile)
             shutil.move(tmpfile, outfile)
 
-        samples[name] = {}
         song_sample_dir = os.path.join(sample_dir, name)
         os.makedirs(song_sample_dir)
 
         # Assemble samples of the smallest chunk size
         # They will be combined later into larger chunks
         prefix = '{0}_{1}_'.format(name, min_chunk_size)
-        samples[name] = mutate.beat_slice(outfile,
-                                          beats,
-                                          min_chunk_size,
-                                          song_sample_dir,
-                                          prefix=prefix,
-                                          format=ext)
+        slices[name] = [Slice(f, name) for f in mutate.beat_slice(outfile,
+                                                                 beats,
+                                                                 min_chunk_size,
+                                                                 song_sample_dir,
+                                                                 prefix=prefix,
+                                                                 format=ext)]
 
     # Remove samples which have irregular duration
-    samples = heuristics.filter_samples(samples)
+    slices = heuristics.filter_slices(slices)
 
-    # Wrangle into the proper format
-    # (this could all use a refactor)
-    new_samps = {}
-    for song, samps in samples.items():
-        new_samps[song] = {
-            min_chunk_size: [(s,) if s is not None else None for s in samps]
-        }
-    samples = new_samps
-
-    # Create samples of larger chunk sizes.
-    for size, new_size in zip(chunk_sizes, chunk_sizes[1:]):
-        for song, samps in samples.items():
-            samples[song][new_size] = heuristics.assemble_samples(samples[song][size])
-
+    # Build songs + samples out of the slices
+    # Some songs may return no slices, in which case, ignore that song.
+    songs = [Song(nm, slics, chunk_sizes) for nm, slics in slices.items() if any(s is not None for s in slics)]
 
     # Select samples and assemble tracks
     echo('\n{0}', 'Assembling tracks', color=Fore.YELLOW)
-    tracks, tracklist = producer.produce_tracks(samples,
+    tracks, tracklist = producer.produce_tracks(songs,
                                                 outdir,
                                                 length=length,
                                                 coherent=not incoherent,

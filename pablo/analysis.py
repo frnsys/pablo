@@ -5,7 +5,7 @@ The Essentia python bindings are really unintuitive.
 """
 
 import numpy as np
-from pablo.models import Key
+from pablo.models.key import Key
 from pablo.datastore import save, load
 from essentia import Pool, run, standard, streaming
 

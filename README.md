@@ -40,6 +40,10 @@ There are a few options you can pass in, to learn about them, help is available:
 
     $ pablo mix --help
 
+You can also "crate dig" YouTube videos with the `dig` ability:
+
+    $ pablo dig https://www.youtube.com/watch?v=uS2nWLz-AbE /path/to/output
+
 
 ## To do
 

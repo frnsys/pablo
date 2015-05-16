@@ -125,29 +125,29 @@ def dig(start, outdir, depth, max_duration):
 @click.argument('library', type=click.Path(exists=True))
 @click.argument('outdir', type=click.Path())
 @click.option('-F', 'focal', default=None, help='The song to base the mix around', type=click.Path(exists=True))
-@click.option('-C', 'max_chunk_size', default=32, help='The max chunk size to generate samples with. Should be a power of 2', type=int)
-@click.option('-c', 'min_chunk_size', default=8, help='The min chunk size to generate samples with. Should be a power of 2', type=int)
+@click.option('-C', 'max_sample_size', default=32, help='The max sample size to generate samples with. Should be a power of 2', type=int)
+@click.option('-c', 'min_sample_size', default=16, help='The min sample size to generate samples with. Should be a power of 2', type=int)
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
 @click.option('-S', 'n_songs', default=None, help='The number of songs to include (if enough are available)', type=int)
 @click.option('-M', 'length', default=512, help='The length in beats for the song. Should be a power of 2', type=int)
 @click.option('--debug', is_flag=True, help='If set, will debug with click track')
 @click.option('--incoherent', is_flag=True, help='Make an "incoherent" mix (don\'t use markov chains)')
-def mix(library, outdir, focal, max_chunk_size, min_chunk_size, n_tracks, n_songs, length, incoherent, debug):
+def mix(library, outdir, focal, max_sample_size, min_sample_size, n_tracks, n_songs, length, incoherent, debug):
     """
     Create a mix
     """
-    if max_chunk_size < min_chunk_size:
-        echo('{0}', 'The max chunk size must be larger than the min chunk size', color=Fore.RED)
+    if max_sample_size < min_sample_size:
+        echo('{0}', 'The max sample size must be larger than the min sample size', color=Fore.RED)
         return
 
-    n_u = math.log(max_chunk_size, 2)
+    n_u = math.log(max_sample_size, 2)
     if int(n_u) != n_u:
-        echo('{0}', 'The max chunk size must be a power of 2', color=Fore.RED)
+        echo('{0}', 'The max sample size must be a power of 2', color=Fore.RED)
         return
 
-    n_l = math.log(min_chunk_size, 2)
+    n_l = math.log(min_sample_size, 2)
     if int(n_l) != n_l:
-        echo('{0}', 'The min chunk size must be a power of 2', color=Fore.RED)
+        echo('{0}', 'The min sample size must be a power of 2', color=Fore.RED)
         return
 
     dur = math.log(length, 2)
@@ -159,7 +159,7 @@ def mix(library, outdir, focal, max_chunk_size, min_chunk_size, n_tracks, n_song
         echo('{0}', 'There must be at least as many songs as there are tracks', color=Fore.RED)
         return
 
-    chunk_sizes = [2**n for n in range(int(n_l), int(n_u) + 1)]
+    sample_sizes = [2**n for n in range(int(n_l), int(n_u) + 1)]
 
     # Prepare output directory, just to check if the directory is not empty
     outdir = os.path.join(outdir, 'pablo_mix')
@@ -182,6 +182,8 @@ def mix(library, outdir, focal, max_chunk_size, min_chunk_size, n_tracks, n_song
     # Select a song to base the mix around
     if focal is None:
         focal = files.pop()
+    else:
+        files = [f for f in files if f != focal]
     focal_bpm, focal_key = analysis.analyze(focal)
 
     echo('\nFocal song: {0}', focal, color=Fore.YELLOW)
@@ -250,22 +252,22 @@ def mix(library, outdir, focal, max_chunk_size, min_chunk_size, n_tracks, n_song
         song_sample_dir = os.path.join(sample_dir, name)
         os.makedirs(song_sample_dir)
 
-        # Assemble samples of the smallest chunk size
-        # They will be combined later into larger chunks
-        prefix = '{0}_{1}_'.format(name, min_chunk_size)
-        slices[name] = [Slice(f, name) for f in mutate.beat_slice(outfile,
-                                                                 beats,
-                                                                 min_chunk_size,
-                                                                 song_sample_dir,
-                                                                 prefix=prefix,
-                                                                 format=ext)]
+        # Assemble samples of the smallest sample size
+        # They will be combined later into larger samples
+        prefix = '{0}_{1}_'.format(name, min_sample_size)
+        slices[name] = [Slice(f) for f in mutate.beat_slice(outfile,
+                                                           beats,
+                                                           min_sample_size,
+                                                           song_sample_dir,
+                                                           prefix=prefix,
+                                                           format=ext)]
 
     # Remove samples which have irregular duration
     slices = heuristics.filter_slices(slices)
 
     # Build songs + samples out of the slices
     # Some songs may return no slices, in which case, ignore that song.
-    songs = [Song(nm, slics, chunk_sizes) for nm, slics in slices.items() if any(s is not None for s in slics)]
+    songs = [Song(nm, slics, sample_sizes) for nm, slics in slices.items() if any(s is not None for s in slics)]
 
     # Select samples and assemble tracks
     echo('\n{0}', 'Assembling tracks', color=Fore.YELLOW)

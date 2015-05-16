@@ -1,5 +1,7 @@
-from pablo.key import Key
 from pablo import heuristics
+from pablo.models.key import Key
+from pablo.models.song import Song
+from pablo.models.sample import Slice
 import unittest
 
 class KeyTests(unittest.TestCase):
@@ -53,29 +55,32 @@ class KeyTests(unittest.TestCase):
 
 
 class HeuristicsTests(unittest.TestCase):
+    #def test_assemble_samples(self):
+        #samples = [('a',), ('b',), None, ('c',), ('d',), ('e',)]
+        #samples_ = heuristics.assemble_samples(samples)
+        #self.assertEqual(samples_, [('a','b'), None, ('d', 'e')])
+
+        #samples_ = heuristics.assemble_samples(samples_)
+        #self.assertEqual(samples_, [None])
+
+
     def test_build_bar(self):
-        samples = {
-            'Since I Left You': {
-                8 : ['sily_08_01.mp3', 'sily_08_02.mp3'],
-                16: ['sily_16_01.mp3', 'sily_16_02.mp3'],
-                32: ['sily_32_01.mp3', 'sily_32_02.mp3'],
-            },
-            'Pablo\'s Cruise': {
-                8 : ['pc_08_01.mp3', 'pc_08_02.mp3'],
-                16: ['pc_16_01.mp3', 'pc_16_02.mp3'],
-                32: ['pc_32_01.mp3', 'pc_32_02.mp3'],
-            }
-        }
+        for _ in range(20):
+            names = ['Summer Crane', 'Frontier Psychiatrist', 'Electricity']
+            sizes = [16, 32]
+            songs = [self._song_factory(name, sizes=sizes) for name in names]
 
-        # eh need to make this an actual test
-        bar = heuristics.build_bar(samples, 32)
-        print(bar)
+            length = 256
+            track = heuristics.build_bar(songs, length)
+            expected_n_slices = length/sizes[0]
+
+            # Flatten the track into slices
+            track = sum([s.slices for s in track], ())
+
+            self.assertEqual(len(track), expected_n_slices)
 
 
-    def test_assemble_samples(self):
-        samples = [('a',), ('b',), None, ('c',), ('d',), ('e',)]
-        samples_ = heuristics.assemble_samples(samples)
-        self.assertEqual(samples_, [('a','b'), None, ('d', 'e')])
-
-        samples_ = heuristics.assemble_samples(samples_)
-        self.assertEqual(samples_, [None])
+    def _song_factory(self, name, sizes=[16, 32]):
+        slices = [Slice('slice_{0}'.format(i)) for i in range(10)]
+        song = Song(name, slices, sizes)
+        return song

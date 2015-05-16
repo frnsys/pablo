@@ -54,7 +54,7 @@ def build_tracks(songs, length, n_tracks, coherent=True):
     return tracks
 
 
-def build_bar(songs, n, prev_sample=None, coherent=True, tracks=[], bar_position=0):
+def build_bar(songs, n, prev_sample=None, coherent=True, tracks=[], bar_position=0, recur=0):
     """
     Builds a bar of n beats in length,
     where n >= the shortest sample length.
@@ -82,44 +82,44 @@ def build_bar(songs, n, prev_sample=None, coherent=True, tracks=[], bar_position
 
     Returns a list of Samples.
     """
-    if len(tracks) >= len(songs):
+    if len(tracks) > len(songs):
         raise Exception('Must have more songs available than overlaid tracks')
 
-    # Remove any songs which are simultaneously playing in other tracks.
+    # Remove any songs which are simultaneously playing in other tracks
+    # over the length of this bar
+    min_size = min(s.min_size for s in songs)
     invalid_songs = []
     for track in tracks:
-        invalid_songs.append(track[bar_position].song)
-    songs = [s for s in songs if s not in invalid_songs]
+        for i in range(n/min_size):
+            invalid_songs.append(track[bar_position+i].song)
+    valid_songs = [s for s in songs if s not in invalid_songs]
+
+    # ugh, well we can overlap songs, I _guess_...
+    if not valid_songs:
+        valid_songs = [random.choice(songs)]
 
     # Find samples of length n
     full_bar_samples = {}
-    for song in songs:
+    for song in valid_songs:
         if n in song.sizes:
             full_bar_samples[song.name] = [s for s in song[n] if s is not None]
 
-    min_size = min(s.min_size for s in songs)
+    min_size = min(s.min_size for s in valid_songs)
 
     if n < min_size:
         raise Exception('Can\'t create a bar shorter than the shortest sample')
 
     # If this is the smallest sample size,
     # we can only return full bars.
-    if n == min_size:
+    # Otherwise, slightly favor complete bars, if available
+    if n == min_size or (full_bar_samples and random.random() <= 0.6):
         if coherent:
             return _select_sample(full_bar_samples, n, prev_sample)
         else:
             song = random.choice(full_bar_samples.keys())
-            return [random.choice(full_bar_samples[song])]
+            return random.choice(full_bar_samples[song])
 
-    # Slightly favor complete bars, if available
-    if full_bar_samples and random.random() <= 0.6:
-        if coherent:
-            return _select_sample(full_bar_samples, n, prev_sample)
-        else:
-            song = random.choice(full_bar_samples.keys())
-            return [random.choice(full_bar_samples[song])]
-
-    # Otherwise, assemble the bar from sub-bars.
+    # Otherwise, assemble the bar from sub-bars
     bar = []
     length = 0
     while length < n:
@@ -146,8 +146,8 @@ def _select_sample(samples, length, prev_sample):
     if prev_sample is not None:
         song = prev_sample.song
 
-        # Repeat the sample
-        if random.random() <= 0.3:
+        # Repeat the sample (if it is of the needed length)
+        if prev_sample.size == length and random.random() <= 0.3:
             return [prev_sample]
 
         # Play the next chronological sample from the song (if available)
@@ -199,7 +199,7 @@ def filter_slices(slices):
     # Identify the duration with the most slices
     best = max(durs.keys(), key=lambda d: len(durs[d]))
 
-    # Remove the non-qualifying slices
+    # The non-qualifying slices become None (gaps)
     for song, slics in slices.items():
         slices[song] = [s if s in durs[best] else None for s in slics]
 

@@ -45,13 +45,26 @@ You can also "crate dig" YouTube videos with the `dig` ability:
     $ pablo dig https://www.youtube.com/watch?v=uS2nWLz-AbE /path/to/output
 
 
+## Tips
+
+- The quality of Pablo's output depends a lot on what songs are in the library ("crate") you specify
+- Longer minimum sample sizes (`-c`) will make for more coherent mixes
+- Pablo will try to avoid overlaying a song with itself, but sometimes it is unavoidable. Increasing the number of songs (`-S`) will make this less likely to happen
+- Pablo will try to make "coherent" tracks (using markov chains) but if you don't want that, you can go full-random with the `--incoherent` flag
+- Songs with less clear beats are much harder to calculate tempos for (natch), but they can lead to interesting results nonetheless
+- Pablo doesn't recognize vocals, so if you have a lot of vocal-heavy songs in your library, you may get kind of cacophonous results - but sometimes it works out well too
+- You can pre-cut some samples, dump them into a folder, and point Pablo to that to generate a mix from as well
+- Kendrick Lamar seems to go well with everything
+
+
 ## To do
 
 - could favor more "[danceable](http://essentia.upf.edu/documentation/reference/std_Danceability.html)" tracks as rhythm tracks
+- make it so you can specify diff libraries/crates for different tracks. That way one could be, for instance, for vocals only, another could only be for rhythm, etc
+- add some EQing heuristics
 
 
 ## Pie-in-the-sky
 
 - use [Gaia](https://github.com/MTG/gaia/tree/master/src/bindings/pygaia/scripts/classification) to train an audio classifier? then use this to have some notion of what kind of song to aim for?
 - Gaia has some kind of music similarity capabilities, I think. Could use that to further filter down selections based on similarity
-- could seed some songs and then crawl related youtube videos for automatic sample discovery

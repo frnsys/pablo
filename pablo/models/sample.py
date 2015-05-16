@@ -14,8 +14,7 @@ class Slice():
     A sample of the smallest size, used to construct
     longer samples.
     """
-    def __init__(self, file, song):
-        self.song = song
+    def __init__(self, file):
         self.file = file
 
 

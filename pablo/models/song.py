@@ -14,6 +14,11 @@ class Song():
         self.slices = slices
         self.sizes = chunk_sizes
 
+        # Associate each slice with this song
+        for slice in slices:
+            if slice is not None:
+                slice.song = self
+
         # Assemble the samples, starting with the smallest
         self.min_size = min(self.sizes)
         self.samples = {

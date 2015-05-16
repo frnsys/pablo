@@ -8,7 +8,7 @@ import shutil
 import random
 from glob import glob
 from colorama import Fore
-from pablo import analysis, mutate, heuristics, producer
+from pablo import analysis, mutate, heuristics, producer, diglet
 from pablo.models.sample import Slice
 from pablo.models.song import Song
 
@@ -31,7 +31,7 @@ def echo(tmp, *txts, **kwargs):
 @click.argument('library', type=click.Path(exists=True))
 def analyze(library):
     """
-    Analyze all songs in a directory.
+    Analyze all songs in a directory
 
     Their analyses will be persisted to a local db.
     """
@@ -47,12 +47,23 @@ def analyze(library):
 
 @cli.command()
 @click.argument('song', type=click.Path(exists=True))
+def analyze_song(song):
+    """
+    Analyze a single song
+    """
+    bpm, key = analysis.analyze(song)
+    echo('\tBPM: {0}', bpm)
+    echo('\tKey: {0} ({1})', key.key, key.scale)
+
+
+@cli.command()
+@click.argument('song', type=click.Path(exists=True))
 @click.argument('library', type=click.Path(exists=True))
 @click.option('-O', 'outdir', default=None, help='Copy the compatible songs to this directory', type=click.Path())
 @click.option('--keyshift', is_flag=True, help='If -O has been set, this will key shift the copied songs as necessary')
 def compatible(song, library, outdir, keyshift):
     """
-    Returns mix-compatible songs for the given song in the given library.
+    Returns mix-compatible songs for the given song in the given library
     """
     focal_bpm, focal_key = analysis.analyze(song)
 
@@ -100,14 +111,14 @@ def compatible(song, library, outdir, keyshift):
 
 
 @cli.command()
-@click.argument('song', type=click.Path(exists=True))
-def analyze_song(song):
-    """
-    Analyze a single song.
-    """
-    bpm, key = analysis.analyze(song)
-    echo('\tBPM: {0}', bpm)
-    echo('\tKey: {0} ({1})', key.key, key.scale)
+@click.argument('start', type=str)
+@click.argument('outdir', type=click.Path(exists=True))
+@click.option('-D', 'depth', default=2, help='How many levels of related vids to dig through', type=int)
+@click.option('-T', 'max_duration', default=360, help='Only download videos below or equal to this duration', type=int)
+def dig(start, outdir, depth, max_duration):
+    echo('Digging from {0}', start, color=Fore.CYAN)
+    diglet.dig(start, outdir, depth, max_duration)
+    echo('{0}', 'Done digging')
 
 
 @cli.command()
@@ -122,6 +133,9 @@ def analyze_song(song):
 @click.option('--debug', is_flag=True, help='If set, will debug with click track')
 @click.option('--incoherent', is_flag=True, help='Make an "incoherent" mix (don\'t use markov chains)')
 def mix(library, outdir, focal, max_chunk_size, min_chunk_size, n_tracks, n_songs, length, incoherent, debug):
+    """
+    Create a mix
+    """
     if max_chunk_size < min_chunk_size:
         echo('{0}', 'The max chunk size must be larger than the min chunk size', color=Fore.RED)
         return

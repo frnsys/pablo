@@ -13,6 +13,9 @@ setup(
     install_requires=[
         'click',
         'pydub',
+        'lxml',
+        'requests',
+        'youtube_dl'
     ],
     entry_points='''
         [console_scripts]

@@ -13,11 +13,16 @@ These mix sketches are meant for high-scale automated ideation and _not_ a subst
 
 ## Setup
 
-Clone the git repo, then from inside the repo:
+You can install via pip:
 
+    $ pip install pablo
+
+Or install the latest version:
+
+    # Clone the git repo, then from inside the repo:
     $ pip install .
 
-Pablo relies on some other libraries for the heavy lifting, so install those:
+Pablo relies on some other libraries for the heavy lifting, so install those (`pip` does not install them for you):
 
     $ brew install sox ffmpeg
 

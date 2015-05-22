@@ -97,3 +97,21 @@ def add_click(infile, beats, outfile):
     marker = standard.AudioOnsetsMarker(onsets=beats, type='beep')
     marked_audio = marker(audio)
     standard.MonoWriter(filename=outfile)(marked_audio)
+
+
+def vocal_eq(infile, outfile):
+    """
+    Tries to EQ a song so that vocals are more prominent.
+    Doesn't work very well.
+    """
+    subprocess.call([
+        'sox',
+        infile,
+        outfile,
+        'bass',
+        '-32',
+        '200',
+        'vad',
+        'norm'
+    ])
+    return outfile

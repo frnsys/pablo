@@ -9,6 +9,9 @@ from pablo.models.key import Key
 from pablo.datastore import save, load
 from essentia import Pool, run, standard, streaming
 
+from sklearn.externals import joblib
+vocal_model = joblib.load('data/vocal_detect.pkl')
+
 
 def analyze(infile):
     """
@@ -153,3 +156,16 @@ def duration(infile):
     audio = standard.MonoLoader(filename=infile)()
     duration = dur(audio)
     return duration
+
+
+# tmp
+from vocal_detect import recognize_speech, featurize
+def has_vocals(infile):
+    """
+    Tries to predict if a sample has vocals in it.
+    Returns the probability that the sample has vocals.
+    Not super good but good enough?
+    """
+    words = recognize_speech(infile)
+    feats = featurize(words)
+    return vocal_model.predict_proba([feats])[0]

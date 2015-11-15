@@ -4,13 +4,16 @@ of this is adapted from Essentia's examples.
 The Essentia python bindings are really unintuitive.
 """
 
+import os
 import numpy as np
 from pablo.models.key import Key
 from pablo.datastore import save, load
 from essentia import Pool, run, standard, streaming
 
 from sklearn.externals import joblib
-vocal_model = joblib.load('data/vocal_detect.pkl')
+#dir = os.path.dirname(os.path.realpath(__file__))
+#path = os.path.join(dir, '../data/vocal_detect.pkl')
+#vocal_model = joblib.load(path)
 
 
 def analyze(infile):

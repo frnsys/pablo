@@ -72,4 +72,11 @@ You can also "crate dig" YouTube videos with the `dig` ability:
 ## Pie-in-the-sky
 
 - use [Gaia](https://github.com/MTG/gaia/tree/master/src/bindings/pygaia/scripts/classification) to train an audio classifier? then use this to have some notion of what kind of song to aim for?
+- reference: <https://www.academia.edu/371700/Music_type_groupers_MTG_generic_music_classification_algorithms>. Features used with SVM: barkbands spread, skewness, kurtosis, dissonance, hfc pitch and confidence, pitch salience, spectral complexity, spectral crest, spectral decrease, energy, spectral flux, spec spread/skewness/kurtosis, spec rolloff, strong peak ZCR, barkbands, mfcc, bpm , beats loudness, onset rate, inharmonicity, odd2even, pitch centroid, tristimulus, chords strength (frame), key strength (global), tuning freq
 - Gaia has some kind of music similarity capabilities, I think. Could use that to further filter down selections based on similarity
+
+
+
+## Installation note
+
+    export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages/

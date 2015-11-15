@@ -130,9 +130,10 @@ def dig(start, outdir, depth, max_duration):
 @click.option('-T', 'n_tracks', default=2, help='The number of tracks to produce and mix together', type=int)
 @click.option('-S', 'n_songs', default=None, help='The number of songs to include (if enough are available)', type=int)
 @click.option('-M', 'length', default=512, help='The length in beats for the song. Should be a power of 2', type=int)
+@click.option('-f', 'sample_format', default='mp3', help='File format for the samples')
 @click.option('--debug', is_flag=True, help='If set, will debug with click track')
 @click.option('--incoherent', is_flag=True, help='Make an "incoherent" mix (don\'t use markov chains)')
-def mix(library, outdir, focal, max_sample_size, min_sample_size, n_tracks, n_songs, length, incoherent, debug):
+def mix(library, outdir, focal, max_sample_size, min_sample_size, n_tracks, n_songs, length, sample_format, incoherent, debug):
     """
     Create a mix
     """
@@ -260,7 +261,7 @@ def mix(library, outdir, focal, max_sample_size, min_sample_size, n_tracks, n_so
                                                            min_sample_size,
                                                            song_sample_dir,
                                                            prefix=prefix,
-                                                           format=ext)]
+                                                           format=sample_format)]
 
     # Remove samples which have irregular duration
     slices = heuristics.filter_slices(slices)

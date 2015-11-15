@@ -97,4 +97,4 @@ if __name__ == '__main__':
     print(metrics.classification_report(y_test, predicted))
 
     # Persist the model
-    joblib.dump('data/vocal_detect.pkl')
+    joblib.dump(model, 'data/vocal_detect.pkl')

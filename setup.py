@@ -4,7 +4,7 @@ setup(
     name='pablo',
     version='0.1.0',
     description='automatic sketching of plunderphonic songs',
-    url='https://github.com/ftzeng/pablo',
+    url='https://github.com/frnsys/pablo',
     author='Francis Tseng',
     author_email='f@frnsys.com',
     license='MIT',

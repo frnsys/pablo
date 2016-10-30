@@ -10,6 +10,7 @@ The quality of the output depends a lot on your own taste in curating the librar
 
 These mix sketches are meant for high-scale automated ideation and _not_ a substitute for human editing ;)
 
+[An example track can be listened to here](https://soundcloud.com/numpy/pablo-mix-iii)
 
 ## Setup
 

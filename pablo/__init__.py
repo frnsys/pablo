@@ -8,6 +8,7 @@ import shutil
 import random
 from glob import glob
 from colorama import Fore
+from datetime import datetime
 from pablo import analysis, mutate, heuristics, producer, diglet
 from pablo.models.sample import Slice
 from pablo.models.song import Song
@@ -163,7 +164,7 @@ def mix(library, outdir, focal, max_sample_size, min_sample_size, n_tracks, n_so
     sample_sizes = [2**n for n in range(int(n_l), int(n_u) + 1)]
 
     # Prepare output directory, just to check if the directory is not empty
-    outdir = os.path.join(outdir, 'pablo_mix')
+    outdir = os.path.join(outdir, 'pablo_mix_{}'.format(datetime.now().strftime('%Y%m%d_%H%M%S')))
     sample_dir = os.path.join(outdir, 'samples')
     if os.path.exists(outdir) and os.listdir(outdir):
         echo('{0}', 'Output directory is not empty', color=Fore.RED)

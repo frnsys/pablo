@@ -8,3 +8,5 @@ build/
 dist/
 diagnostics/
 training/
+config.py
+.cache-*

@@ -10,6 +10,7 @@ The quality of the output depends a lot on your own taste in curating the librar
 
 These mix sketches are meant for high-scale automated ideation and _not_ a substitute for human editing ;)
 
+[An example track can be listened to here](https://soundcloud.com/numpy/pablo-mix-iii)
 
 ## Setup
 
@@ -28,6 +29,16 @@ Pablo relies on some other libraries for the heavy lifting, so install those (`p
 
 And you'll also need [Essentia](http://essentia.upf.edu/documentation/installing.html). [Installation instructions are here](http://essentia.upf.edu/documentation/installing.html).
 
+Finally, you need to specify some Spotify API information to get audio features from Spotify. Create `config.py` with the following:
+
+```python
+USERNAME='your spotify username'
+CLIENT_ID='your spotify client id'
+CLIENT_SECRET='your spotify client secret'
+REDIRECT_URI='redirect uri'
+```
+
+The redirect URI can basically be anything, just authorize it in the Spotify API settings. You just need to copy the URL you're redirected afterwards.
 
 ## Usage
 
